@@ -777,7 +777,9 @@ py_load_library(value filename_ocaml, value debug_build_ocaml)
     CAMLparam2(filename_ocaml, debug_build_ocaml);
     if (Is_block(filename_ocaml)) {
         const char *filename = String_val(Field(filename_ocaml, 0));
+        caml_enter_blocking_section_no_pending();
         library = open_library(filename);
+        caml_leave_blocking_section();
         if (!library) {
             caml_failwith(get_library_error());
         }
@@ -785,6 +787,7 @@ py_load_library(value filename_ocaml, value debug_build_ocaml)
     else {
         library = get_default_library();
     }
+    caml_enter_blocking_section();
     Python_Py_GetVersion = find_symbol(library, "Py_GetVersion");
     if (!Python_Py_GetVersion) {
         caml_failwith("No Python symbol");
@@ -854,6 +857,7 @@ py_load_library(value filename_ocaml, value debug_build_ocaml)
         guess_debug_build();
     }
     tuple_empty = Python_PyTuple_New(0);
+    caml_leave_blocking_section();
     caml_register_custom_operations(&pyops);
     CAMLreturn(Val_unit);
 }

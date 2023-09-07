@@ -1705,6 +1705,19 @@ let print_stub prefix pyml_assert_initialized channel wrapper =
     | Fun arguments' ->
         String.concat "" (List.mapi free_argument arguments') in
   let return = coercion_of_c result in
+  let blocking =
+    [ "PyObject_Call"
+    ; "PyCallIter_New"
+    ; "PyEval_CallObjectWithKeywords"
+    ; "PyImport_ImportModule"
+    ]
+  in
+  let enter_block, leave_block =
+    if List.exists (String.equal symbol) blocking then
+      "    caml_enter_blocking_section_no_pending();\n",
+      "\n    caml_leave_blocking_section();"
+    else "", ""
+  in
   Printf.fprintf channel "
 CAMLprim value
 %s(%s)
@@ -1712,11 +1725,11 @@ CAMLprim value
 %s
     %s
 %s
-%s%s
+%s%s%s%s
 %s
 }
 " symbol_wrapper stub_arguments camlparam pyml_assert_initialized destruct_arguments
-    call free return;
+    enter_block call leave_block free return;
   if need_bytecode then
     let arguments' =
       match arguments with
